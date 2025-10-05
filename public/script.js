@@ -9,7 +9,7 @@ const map = L.map('map', {
   zoomSnap: 0.25,
   wheelPxPerZoomLevel: 100,
 });
-L.imageOverlay('gta_map.jpg', mapBounds).addTo(map);
+L.imageOverlay('/gta_map.jpg', mapBounds).addTo(map);
 map.fitBounds(mapBounds);
 
 let selectedCoords = null;
