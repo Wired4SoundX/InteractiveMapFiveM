@@ -31,6 +31,13 @@ io.on('connection', (socket) => {
     console.log('Marker added:', marker);
   });
   
+  // Handle delete marker
+  socket.on('deleteMarker', (markerId) => {
+    markers = markers.filter(m => m.id !== markerId);
+    io.emit('markerDeleted', markerId);
+    console.log('Marker deleted:', markerId);
+  });
+  
   // Handle new category
   socket.on('addCategory', (category) => {
     categories.push(category);
