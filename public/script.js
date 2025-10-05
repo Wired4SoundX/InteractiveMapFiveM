@@ -1,4 +1,3 @@
-
 const socket = io();
 
 const mapBounds = [[0, 0], [768, 768]];
@@ -9,7 +8,7 @@ const map = L.map('map', {
   zoomSnap: 0.25,
   wheelPxPerZoomLevel: 100,
 });
-L.imageOverlay('/gta_map.jpg', mapBounds).addTo(map);
+L.imageOverlay('gta_map.jpg', mapBounds).addTo(map);
 map.fitBounds(mapBounds);
 
 let selectedCoords = null;
@@ -40,7 +39,13 @@ socket.on('deleteCategory', (categoryId) => {
   renderCategories();
 });
 
+const markerObjects = {};
+
 function addMarkerToMap(marker) {
+  if (!marker.id) {
+    marker.id = Date.now().toString() + Math.random();
+  }
+  
   const m = L.circleMarker(marker.coords, {
     radius: 8,
     color: marker.color,
@@ -48,7 +53,35 @@ function addMarkerToMap(marker) {
     fillOpacity: 0.9,
     weight: 2
   }).addTo(map);
-  m.bindPopup(`<strong>${marker.title}</strong><br>${marker.desc}`);
+  
+  const popupContent = `
+    <div style="min-width: 150px;">
+      <strong>${marker.title}</strong><br>
+      ${marker.desc}<br>
+      <button onclick="confirmDeleteMarker('${marker.id}')" 
+              style="margin-top: 8px; padding: 6px 12px; background: #ff4444; 
+                     color: white; border: none; border-radius: 5px; 
+                     cursor: pointer; font-size: 12px; width: 100%;">
+        Delete Marker
+      </button>
+    </div>
+  `;
+  
+  m.bindPopup(popupContent);
+  markerObjects[marker.id] = { marker: m, data: marker };
+}
+
+function confirmDeleteMarker(markerId) {
+  if (confirm('Are you sure you want to delete this marker?')) {
+    socket.emit('deleteMarker', markerId);
+  }
+}
+
+function removeMarkerFromMap(markerId) {
+  if (markerObjects[markerId]) {
+    map.removeLayer(markerObjects[markerId].marker);
+    delete markerObjects[markerId];
+  }
 }
 
 // Map click handler
