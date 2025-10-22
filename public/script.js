@@ -1,4 +1,20 @@
-const socket = io();
+const socket = io({
+  reconnection: true,
+  reconnectionDelay: 1000,
+  reconnectionAttempts: 5
+});
+
+socket.on('connect', () => {
+  console.log('✅ Connected to server');
+});
+
+socket.on('disconnect', () => {
+  console.log('⚠️ Disconnected from server');
+});
+
+socket.on('connect_error', (error) => {
+  console.error('❌ Connection error:', error);
+});
 
 const mapBounds = [[0, 0], [768, 768]];
 const map = L.map('map', {
@@ -17,9 +33,9 @@ let categories = [];
 // Load markers from server
 socket.on('loadMarkers', (markers) => {
   markers.forEach(marker => {
-    // Ensure marker has an id
+    // Use MongoDB _id if custom id doesn't exist
     if (!marker.id && marker._id) {
-      marker.id = marker._id;
+      marker.id = marker._id.toString();
     }
     addMarkerToMap(marker);
   });
@@ -92,14 +108,25 @@ function addMarkerToMap(marker) {
 }
 
 function confirmDeleteMarker(markerId) {
+  console.log('Delete button clicked for marker:', markerId);
+  console.log('Socket connected?', socket.connected);
+  
   if (confirm('Are you sure you want to delete this marker?')) {
+    console.log('Emitting deleteMarker event for:', markerId);
     socket.emit('deleteMarker', markerId);
+  } else {
+    console.log('Delete cancelled');
   }
 }
 
 function updateMarkerColor(markerId, newColor) {
+  console.log('Updating marker color:', markerId, newColor);
   socket.emit('updateMarkerColor', { markerId, newColor });
 }
+
+// Make functions globally accessible
+window.confirmDeleteMarker = confirmDeleteMarker;
+window.updateMarkerColor = updateMarkerColor;
 
 function updateMarkerOnMap(markerId, newColor) {
   if (markerObjects[markerId]) {
@@ -134,9 +161,15 @@ function updateMarkerOnMap(markerId, newColor) {
 }
 
 function removeMarkerFromMap(markerId) {
+  console.log('Attempting to remove marker:', markerId);
+  console.log('Available markers:', Object.keys(markerObjects));
+  
   if (markerObjects[markerId]) {
     map.removeLayer(markerObjects[markerId].marker);
     delete markerObjects[markerId];
+    console.log('Marker removed successfully');
+  } else {
+    console.error('Marker not found in markerObjects:', markerId);
   }
 }
 
