@@ -70,11 +70,44 @@ io.on('connection', async (socket) => {
   // Handle delete marker
   socket.on('deleteMarker', async (markerId) => {
     try {
-      await Marker.deleteOne({ id: markerId });
-      io.emit('markerDeleted', markerId);
-      console.log('Marker deleted:', markerId);
+      console.log('🔍 Attempting to delete marker with ID:', markerId);
+      console.log('🔍 Type of markerId:', typeof markerId);
+      
+      // First, let's see what's actually in the database
+      const allMarkers = await Marker.find();
+      console.log('📍 All markers in DB:', allMarkers.map(m => ({ id: m.id, _id: m._id })));
+      
+      // Try both id field and MongoDB _id field
+      const result = await Marker.deleteOne({ 
+        $or: [
+          { id: markerId }, 
+          { id: String(markerId) },
+          { _id: markerId }
+        ] 
+      });
+      
+      console.log('📊 Delete result:', result);
+      
+      if (result.deletedCount > 0) {
+        io.emit('markerDeleted', markerId);
+        console.log('✅ Marker deleted successfully:', markerId);
+      } else {
+        console.log('⚠️ No marker found with ID:', markerId);
+        console.log('⚠️ This usually means ID mismatch between frontend and database');
+      }
     } catch (err) {
-      console.error('Error deleting marker:', err);
+      console.error('❌ Error deleting marker:', err);
+    }
+  });
+  
+  // Handle marker color update
+  socket.on('updateMarkerColor', async ({ markerId, newColor }) => {
+    try {
+      await Marker.updateOne({ id: markerId }, { color: newColor });
+      io.emit('markerColorUpdated', { markerId, newColor });
+      console.log('Marker color updated:', markerId, newColor);
+    } catch (err) {
+      console.error('Error updating marker color:', err);
     }
   });
   
